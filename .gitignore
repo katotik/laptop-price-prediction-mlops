@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Data and ML artifacts
+data/raw/*
+data/processed/*
+models/*
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.onnx
+*.parquet
+!data/raw/.gitkeep
+!data/raw/laptops_Dataset.csv
+!data/processed/.gitkeep
+!models/.gitkeep
+
+# Airflow
+services/airflow/logs/*
+!services/airflow/logs/.gitkeep
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

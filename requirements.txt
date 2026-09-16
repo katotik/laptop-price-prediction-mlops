@@ -1,0 +1,10 @@
+# Data and machine learning
+pandas
+scikit-learn
+joblib
+
+# Deployment
+fastapi
+uvicorn
+streamlit
+requests

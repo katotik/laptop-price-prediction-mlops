@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: code/deployment/api/Dockerfile
+    image: laptop-price-api:latest
+    environment:
+      MODEL_PATH: /app/models/laptop_price_model.joblib
+      METRICS_PATH: /app/models/metrics.json
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../models:/app/models:ro
+
+  app:
+    build:
+      context: ../..
+      dockerfile: code/deployment/app/Dockerfile
+    image: laptop-price-app:latest
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
