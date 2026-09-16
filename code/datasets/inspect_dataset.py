@@ -150,7 +150,7 @@ def inspect_dataset(path: Path) -> None:
     print("6. Fill categorical missing values with 'Unknown'.")
     print("7. One-hot encode selected categorical features with unknown-category handling.")
     print("8. Split into train/test before fitting imputers and encoders.")
-    print("9. Keep plausible expensive laptops; investigate only impossible values as outliers.")
+    print("9. Filter extreme prices in the training split only; keep the full test price range.")
 
 
 def parse_args() -> argparse.Namespace:

@@ -3,8 +3,8 @@ FROM python:3.11-slim
 WORKDIR /app
 ENV PYTHONPATH=/app/code
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-api.txt .
+RUN pip install --no-cache-dir --default-timeout=120 --retries=10 -r requirements-api.txt
 
 COPY code ./code
 COPY models ./models

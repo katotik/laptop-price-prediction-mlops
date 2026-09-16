@@ -4,7 +4,7 @@ End-to-end MLOps project for the PMLDL Assignment 1 deployment task. The pipelin
 
 ## What Is Implemented
 
-- Data engineering: loads `data/raw/laptops_Dataset.csv`, removes duplicates and price outliers, fills missing input values, keeps useful columns, and saves `data/processed/train.csv` plus `data/processed/test.csv`.
+- Data engineering: loads `data/raw/laptops_Dataset.csv`, validates the input columns, removes duplicates and invalid prices, fills missing input values, and splits the data. Extreme prices are filtered from the training split only; the testing split keeps the original price range.
 - Model engineering: parses laptop specification text into numeric features, one-hot encodes categorical fields, trains a `RandomForestRegressor`, saves `models/laptop_price_model.joblib`, and logs metrics to `models/metrics.json`.
 - Deployment: FastAPI serves predictions at `/predict`; Streamlit provides input fields, a prediction button, and a prediction result area.
 - Automation: `code/pipeline.py --watch --deploy --interval-seconds 300` runs the complete pipeline every 5 minutes.
@@ -56,6 +56,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+The Docker images install only the dependencies needed by their respective services.
+
 ## Run Pipeline Once
 
 ```bash
@@ -72,6 +74,7 @@ This creates:
 ## Run Tests
 
 ```bash
+pip install -r requirements-dev.txt
 python3 -m unittest discover -s tests -v
 ```
 

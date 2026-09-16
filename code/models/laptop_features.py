@@ -54,7 +54,8 @@ def first_number(value: Any) -> float | None:
 
 
 def parse_ram_gb(value: Any) -> float | None:
-    return first_number(value)
+    match = re.search(r"(\d+(?:\.\d+)?)\s*gb\b", str(value), flags=re.I)
+    return float(match.group(1)) if match else None
 
 
 def parse_storage_gb(value: Any) -> float | None:
@@ -79,8 +80,13 @@ def parse_storage_gb(value: Any) -> float | None:
 
 def parse_screen_size(value: Any) -> float | None:
     text = str(value).lower()
-    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:\"|''|inch|inches)", text)
-    return float(match.group(1)) if match else first_number(value)
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:\"|''|″|inches?\b|in\b)", text)
+    if match:
+        size = float(match.group(1))
+    else:
+        match = re.search(r"(\d+(?:\.\d+)?)\s*cm\b", text)
+        size = round(float(match.group(1)) / 2.54, 1) if match else first_number(value)
+    return size if size is not None and 8 <= size <= 25 else None
 
 
 def parse_resolution(value: Any) -> tuple[float | None, float | None]:
@@ -102,6 +108,14 @@ def parse_battery_wh(value: Any) -> float | None:
         flags=re.I,
     )
     return float(match.group(1)) if match else None
+
+
+def parse_weight_kg(value: Any) -> float | None:
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(kg|kilograms?|g|grams?)\b", str(value), flags=re.I)
+    if match:
+        weight = float(match.group(1))
+        return weight / 1000 if match.group(2).lower().startswith("g") else weight
+    return first_number(value)
 
 
 def parse_warranty_years(value: Any) -> float | None:
@@ -130,7 +144,7 @@ class LaptopFeatureBuilder(BaseEstimator, TransformerMixin):
         output["resolution_height"] = resolution.map(lambda item: item[1])
 
         output["refresh_rate_hz"] = dataframe.get("Display Refresh Rate", pd.Series(index=dataframe.index)).map(parse_refresh_rate)
-        output["weight_kg"] = dataframe.get("Weight", pd.Series(index=dataframe.index)).map(first_number)
+        output["weight_kg"] = dataframe.get("Weight", pd.Series(index=dataframe.index)).map(parse_weight_kg)
         output["battery_wh"] = dataframe.get("Battery", pd.Series(index=dataframe.index)).map(parse_battery_wh)
         output["processor_generation"] = dataframe.get("Processor Generation", pd.Series(index=dataframe.index)).map(first_number)
         output["warranty_years"] = dataframe.get("Warranty", pd.Series(index=dataframe.index)).map(parse_warranty_years)

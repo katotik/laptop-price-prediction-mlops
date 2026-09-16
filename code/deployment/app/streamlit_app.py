@@ -54,6 +54,11 @@ if submitted:
     }
     try:
         response = requests.post(f"{API_URL}/predict", json=payload, timeout=10)
+        if response.status_code == 422:
+            issues = response.json().get("detail", [])
+            message = "; ".join(f"{item['loc'][-1]}: {item['msg']}" for item in issues)
+            st.error(message or "Please check the laptop specifications.")
+            st.stop()
         response.raise_for_status()
         prediction = response.json()["predicted_price"]
         st.success(f"Predicted price: {prediction:,.2f}")

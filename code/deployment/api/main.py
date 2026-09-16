@@ -4,13 +4,22 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
+
+from models.laptop_features import (
+    parse_ram_gb,
+    parse_resolution,
+    parse_screen_size,
+    parse_storage_gb,
+    parse_weight_kg,
+)
 
 
 MODEL_PATH = Path(os.getenv("MODEL_PATH", "models/laptop_price_model.joblib"))
@@ -18,20 +27,50 @@ METRICS_PATH = Path(os.getenv("METRICS_PATH", "models/metrics.json"))
 
 
 class LaptopInput(BaseModel):
-    brand: str = Field("Lenovo", examples=["Lenovo"])
-    processor: str = Field("Intel Core i7-13620H", examples=["Intel Core i7-13620H"])
-    video_graphics: str = Field("Nvidia GeForce RTX 4060 8GB", examples=["Nvidia GeForce RTX 4060 8GB"])
-    ram: str = Field("16GB DDR5", examples=["16GB DDR5"])
-    hard_drive: str = Field("1TB NVMe PCIe SSD", examples=["1TB NVMe PCIe SSD"])
-    display: str = Field('15.6" FHD IPS 144Hz', examples=['15.6" FHD IPS 144Hz'])
-    display_resolution: str = Field("1920x1080", examples=["1920x1080"])
-    display_refresh_rate: str = Field("144 Hz", examples=["144 Hz"])
-    operating_system: str = Field("Windows 11 Home", examples=["Windows 11 Home"])
-    battery: str = Field("60 Wh", examples=["60 Wh"])
-    weight: str = Field("2.2 kg", examples=["2.2 kg"])
-    colors: str = Field("Black", examples=["Black"])
-    warranty: str = Field("1 Year", examples=["1 Year"])
-    processor_generation: str = Field("13th generation", examples=["13th generation"])
+    brand: str = Field(..., min_length=1, examples=["Lenovo"])
+    processor: str = Field(..., min_length=1, examples=["Intel Core i7-13620H"])
+    video_graphics: str = Field("Unknown", examples=["Nvidia GeForce RTX 4060 8GB"])
+    ram: str = Field(..., min_length=1, examples=["16GB DDR5"])
+    hard_drive: str = Field(..., min_length=1, examples=["1TB NVMe PCIe SSD"])
+    display: str = Field(..., min_length=1, examples=['15.6" FHD IPS 144Hz'])
+    display_resolution: str = Field(..., min_length=1, examples=["1920x1080"])
+    display_refresh_rate: str = Field("Unknown", examples=["144 Hz"])
+    operating_system: str = Field("Unknown", examples=["Windows 11 Home"])
+    battery: str = Field("Unknown", examples=["60 Wh"])
+    weight: str = Field(..., min_length=1, examples=["2.2 kg"])
+    colors: str = Field("Unknown", examples=["Black"])
+    warranty: str = Field("Unknown", examples=["1 Year"])
+    processor_generation: str = Field("Unknown", examples=["13th generation"])
+
+    @field_validator("*")
+    @classmethod
+    def strip_nonempty_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("must not be blank")
+        return cleaned
+
+    @field_validator("ram", "hard_drive", "display", "display_resolution", "weight")
+    @classmethod
+    def validate_key_specifications(cls, value: str, info: ValidationInfo) -> str:
+        if info.field_name == "display_resolution":
+            width, height = parse_resolution(value)
+            valid = width is not None and height is not None and width >= 640 and height >= 480
+        else:
+            parsers = {
+                "ram": (parse_ram_gb, 1, 256),
+                "hard_drive": (parse_storage_gb, 32, 16_384),
+                "display": (parse_screen_size, 8, 25),
+                "weight": (parse_weight_kg, 0.2, 10),
+            }
+            parser, minimum, maximum = parsers[info.field_name]
+            parsed = parser(value)
+            valid = parsed is not None and minimum <= parsed <= maximum
+            if info.field_name == "weight":
+                valid = valid and bool(re.search(r"\d\s*(?:kg|g)\b", value, flags=re.I))
+        if not valid:
+            raise ValueError(f"invalid {info.field_name} specification")
+        return value
 
 
 def model_input_to_dataframe(payload: LaptopInput) -> pd.DataFrame:

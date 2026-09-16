@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 from pathlib import Path
 
 import pandas as pd
@@ -34,24 +35,25 @@ KEEP_COLUMNS = [
 
 
 def remove_price_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
-    q1 = dataframe[TARGET].quantile(0.25)
-    q3 = dataframe[TARGET].quantile(0.75)
+    log_price = dataframe[TARGET].map(math.log)
+    q1 = log_price.quantile(0.25)
+    q3 = log_price.quantile(0.75)
     iqr = q3 - q1
-    lower = q1 - 1.5 * iqr
-    upper = q3 + 1.5 * iqr
-    return dataframe[dataframe[TARGET].between(lower, upper)].copy()
+    lower = q1 - 2.5 * iqr
+    upper = q3 + 2.5 * iqr
+    return dataframe[log_price.between(lower, upper)].copy()
 
 
 def prepare(raw_path: Path, processed_dir: Path, test_size: float, random_state: int) -> None:
     dataframe = pd.read_csv(raw_path, encoding="utf-8-sig")
-    dataframe = dataframe.rename(columns={"Brand:": "Brand"})
-
-    keep_columns = [column.replace("Brand:", "Brand") for column in KEEP_COLUMNS]
-    dataframe = dataframe[[column for column in keep_columns if column in dataframe.columns]]
+    raw_rows = len(dataframe)
+    missing_columns = sorted(set(KEEP_COLUMNS) - set(dataframe.columns))
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
+    dataframe = dataframe[KEEP_COLUMNS].rename(columns={"Brand:": "Brand"})
     dataframe = dataframe.drop_duplicates()
     dataframe = dataframe.dropna(subset=[TARGET])
     dataframe = dataframe[dataframe[TARGET] > 0]
-    dataframe = remove_price_outliers(dataframe)
     feature_columns = dataframe.columns.drop(TARGET)
     dataframe[feature_columns] = dataframe[feature_columns].fillna("Unknown")
 
@@ -60,6 +62,8 @@ def prepare(raw_path: Path, processed_dir: Path, test_size: float, random_state:
         test_size=test_size,
         random_state=random_state,
     )
+    train_rows_before_outliers = len(train)
+    train = remove_price_outliers(train)
 
     processed_dir.mkdir(parents=True, exist_ok=True)
     train.to_csv(processed_dir / "train.csv", index=False)
@@ -67,8 +71,9 @@ def prepare(raw_path: Path, processed_dir: Path, test_size: float, random_state:
 
     summary = pd.DataFrame(
         [
-            {"artifact": "raw_rows", "value": len(pd.read_csv(raw_path, encoding="utf-8-sig"))},
-            {"artifact": "prepared_rows", "value": len(dataframe)},
+            {"artifact": "raw_rows", "value": raw_rows},
+            {"artifact": "prepared_rows", "value": len(train) + len(test)},
+            {"artifact": "train_outliers_removed", "value": train_rows_before_outliers - len(train)},
             {"artifact": "train_rows", "value": len(train)},
             {"artifact": "test_rows", "value": len(test)},
             {"artifact": "columns", "value": len(dataframe.columns)},
