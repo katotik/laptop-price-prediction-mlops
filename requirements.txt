@@ -1,10 +1,10 @@
 # Data and machine learning
-pandas
-scikit-learn
-joblib
+pandas==2.3.3
+scikit-learn==1.6.1
+joblib==1.5.3
 
 # Deployment
-fastapi
-uvicorn
-streamlit
-requests
+fastapi==0.115.12
+uvicorn==0.34.2
+streamlit==1.45.1
+requests==2.32.3

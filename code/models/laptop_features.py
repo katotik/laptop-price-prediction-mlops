@@ -59,14 +59,22 @@ def parse_ram_gb(value: Any) -> float | None:
 
 def parse_storage_gb(value: Any) -> float | None:
     text = str(value).lower()
-    matches = re.findall(r"(\d+(?:\.\d+)?)\s*(tb|gb)", text)
+    matches = list(re.finditer(r"(\d+(?:\.\d+)?)\s*(tb|gb)\b", text))
     if not matches:
         return None
-    total = 0.0
-    for number, unit in matches:
-        amount = float(number)
-        total += amount * 1024 if unit == "tb" else amount
-    return total
+    amounts = [
+        float(match.group(1)) * (1024 if match.group(2) == "tb" else 1)
+        for match in matches
+    ]
+    if (
+        len(matches) > 1
+        and not text[: matches[0].start()].strip()
+        and text[matches[0].end() : matches[1].start()].lstrip().startswith(",")
+        and sum(amounts[1:]) <= amounts[0]
+    ):
+        # The leading capacity is a stated total; later capacities describe its components.
+        return amounts[0]
+    return sum(amounts)
 
 
 def parse_screen_size(value: Any) -> float | None:
@@ -88,7 +96,11 @@ def parse_refresh_rate(value: Any) -> float | None:
 
 
 def parse_battery_wh(value: Any) -> float | None:
-    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:wh|whr)", str(value), flags=re.I)
+    match = re.search(
+        r"(\d+(?:\.\d+)?)\s*(?:battery\s*)?(?:\(\s*)?(?:wh(?:rs?)?|w/h)\b",
+        str(value),
+        flags=re.I,
+    )
     return float(match.group(1)) if match else None
 
 

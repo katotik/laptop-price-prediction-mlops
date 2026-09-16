@@ -15,7 +15,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from code.models.laptop_features import CATEGORICAL_FEATURES, NUMERIC_FEATURES, LaptopFeatureBuilder
+from models.laptop_features import CATEGORICAL_FEATURES, NUMERIC_FEATURES, LaptopFeatureBuilder
 
 
 TARGET = "Price"

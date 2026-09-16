@@ -52,6 +52,8 @@ def prepare(raw_path: Path, processed_dir: Path, test_size: float, random_state:
     dataframe = dataframe.dropna(subset=[TARGET])
     dataframe = dataframe[dataframe[TARGET] > 0]
     dataframe = remove_price_outliers(dataframe)
+    feature_columns = dataframe.columns.drop(TARGET)
+    dataframe[feature_columns] = dataframe[feature_columns].fillna("Unknown")
 
     train, test = train_test_split(
         dataframe,
